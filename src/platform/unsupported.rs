@@ -20,8 +20,19 @@ pub fn screen_rect(_window: &Window, _bounds: Bounds<Pixels>) -> Option<ScreenRe
     None
 }
 
-pub fn prepare_overlay(_window: &Window) {}
+#[derive(Clone)]
+pub struct NativeOverlay;
 
-pub fn place_overlay(_window: &Window, _frame: ScreenRect, _alpha: f64) {}
+#[allow(
+    clippy::unused_self,
+    reason = "shares the signature of the macOS implementation"
+)]
+impl NativeOverlay {
+    pub fn place(&self, _frame: ScreenRect, _alpha: f64) {}
 
-pub fn hide_overlay(_window: &Window) {}
+    pub fn hide(&self) {}
+}
+
+pub fn prepare_overlay(_window: &Window) -> Option<NativeOverlay> {
+    None
+}

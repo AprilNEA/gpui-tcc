@@ -12,7 +12,7 @@ use crate::host_app::HostApp;
 use crate::motion::{self, INITIAL_ALPHA, LAUNCH_DURATION, OVERLAY_SIZE, ScreenRect};
 use crate::overlay::Overlay;
 use crate::panel::PrivacyPanel;
-use crate::platform;
+use crate::platform::{self, NativeOverlay};
 
 /// How often the overlay re-anchors to the System Settings window.
 const TRACK_INTERVAL: Duration = Duration::from_millis(150);
@@ -30,6 +30,7 @@ impl Global for Assistant {}
 
 struct Session {
     overlay: WindowHandle<Overlay>,
+    native: NativeOverlay,
     phase: Phase,
     _tracker: Task<()>,
 }
@@ -44,6 +45,7 @@ enum Phase {
     Tracking,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Placement {
     Hidden,
     Shown { frame: ScreenRect, alpha: f64 },
@@ -74,25 +76,41 @@ pub(crate) fn present(
         window_background: WindowBackgroundAppearance::Transparent,
         ..WindowOptions::default()
     };
+    let mut native = None;
     let overlay = cx
         .open_window(options, |window, cx| {
-            platform::prepare_overlay(window);
+            native = platform::prepare_overlay(window);
             cx.new(|_| Overlay::new(panel, host))
         })
         .map_err(Error::OpenWindow)?;
+    let Some(native) = native else {
+        overlay
+            .update(cx, |_, window, _| window.remove_window())
+            .ok();
+        return Err(Error::OpenWindow(anyhow::anyhow!(
+            "the overlay window has no native window"
+        )));
+    };
     cx.open_url(&panel.settings_url());
 
+    // AppKit reports each native move and resize back to GPUI through a callback that needs
+    // to borrow the app, so the overlay is placed between updates rather than inside one.
     let tracker = cx.spawn(async move |cx: &mut AsyncApp| {
         loop {
-            let Some(interval) = cx.update(tick) else {
+            let Some((native, placement, interval)) = cx.update(advance) else {
                 return;
             };
+            match placement {
+                Placement::Hidden => native.hide(),
+                Placement::Shown { frame, alpha } => native.place(frame, alpha),
+            }
             cx.background_executor().timer(interval).await;
         }
     });
     cx.set_global(Assistant {
         session: Some(Session {
             overlay,
+            native,
             phase: Phase::Pending { launch_from },
             _tracker: tracker,
         }),
@@ -118,23 +136,16 @@ pub(crate) fn is_presented(cx: &App) -> bool {
         .is_some_and(|assistant| assistant.session.is_some())
 }
 
-/// Moves the overlay one step and returns how long to wait before the next step, or `None`
-/// once the overlay is gone.
-fn tick(cx: &mut App) -> Option<Duration> {
-    let session = cx.try_global::<Assistant>()?.session.as_ref()?;
-    let overlay = session.overlay;
-    let (placement, phase, interval) = step(session.phase, platform::settings_window());
-
-    overlay
-        .update(cx, |_, window, _| match placement {
-            Placement::Hidden => platform::hide_overlay(window),
-            Placement::Shown { frame, alpha } => platform::place_overlay(window, frame, alpha),
-        })
-        .ok()?;
-    if let Some(session) = cx.global_mut::<Assistant>().session.as_mut() {
-        session.phase = phase;
+/// Advances the session one step and returns what to do with the native window and how long to
+/// wait before the next step, or `None` once the overlay is gone.
+fn advance(cx: &mut App) -> Option<(NativeOverlay, Placement, Duration)> {
+    if !cx.has_global::<Assistant>() {
+        return None;
     }
-    Some(interval)
+    let session = cx.global_mut::<Assistant>().session.as_mut()?;
+    let (placement, phase, interval) = step(session.phase, platform::settings_window());
+    session.phase = phase;
+    Some((session.native.clone(), placement, interval))
 }
 
 fn step(phase: Phase, settings: Option<platform::SettingsWindow>) -> (Placement, Phase, Duration) {

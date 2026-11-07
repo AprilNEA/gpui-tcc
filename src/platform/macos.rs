@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use gpui_kit::{Bounds, Pixels, Window};
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
+use objc2::{AnyThread as _, MainThreadMarker};
 use objc2_app_kit::{
     NSBitmapImageFileType, NSBitmapImageRep, NSScreen, NSView, NSWindow, NSWindowAnimationBehavior,
     NSWorkspace,
@@ -29,6 +29,10 @@ const MIN_SETTINGS_WINDOW_SIZE: (f64, f64) = (320.0, 240.0);
 /// Side length in points of the icon bitmap handed to GPUI.
 const ICON_SIZE: f64 = 128.0;
 
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "shares the signature of the unsupported-platform implementation"
+)]
 pub fn ensure_supported() -> Result<(), Error> {
     Ok(())
 }
@@ -68,7 +72,7 @@ fn icon_png(path: &Path) -> Option<Vec<u8>> {
         NSWorkspace::sharedWorkspace().iconForFile(&NSString::from_str(&path.to_string_lossy()));
     let mut rect = NSRect::new(NSPoint::ZERO, NSSize::new(ICON_SIZE, ICON_SIZE));
     // SAFETY: `rect` is a valid, writable pointer for the call and `hints` is `None`.
-    let cg_image = unsafe { icon.CGImageForProposedRect_context_hints(&mut rect, None, None) }?;
+    let cg_image = unsafe { icon.CGImageForProposedRect_context_hints(&raw mut rect, None, None) }?;
     let rep = NSBitmapImageRep::initWithCGImage(NSBitmapImageRep::alloc(), &cg_image);
     // SAFETY: An empty property dictionary matches the declared key and value types.
     let data = unsafe {
@@ -84,19 +88,17 @@ pub fn settings_window() -> Option<SettingsWindow> {
         return None;
     }
     let screens = Screens::current(mtm)?;
-    match largest_window_frame(frontmost.processIdentifier()) {
-        Some(frame) => Some(SettingsWindow {
-            frame,
-            visible: screens.visible_frame_for(frame),
-        }),
-        None => {
-            let visible = screens.main_visible_frame(mtm);
-            Some(SettingsWindow {
-                frame: motion::fallback_settings_frame(visible),
-                visible,
-            })
-        }
-    }
+    let Some(frame) = largest_window_frame(frontmost.processIdentifier()) else {
+        let visible = screens.main_visible_frame(mtm);
+        return Some(SettingsWindow {
+            frame: motion::fallback_settings_frame(visible),
+            visible,
+        });
+    };
+    Some(SettingsWindow {
+        frame,
+        visible: screens.visible_frame_for(frame),
+    })
 }
 
 fn largest_window_frame(pid: i32) -> Option<ScreenRect> {
@@ -122,7 +124,7 @@ fn largest_window_frame(pid: i32) -> Option<ScreenRect> {
             let bounds = info.get(bounds_key)?.downcast::<CFDictionary>().ok()?;
             let mut rect = CGRect::ZERO;
             // SAFETY: `rect` is a valid, writable pointer for the duration of the call.
-            if !unsafe { CGRectMakeWithDictionaryRepresentation(Some(&bounds), &mut rect) } {
+            if !unsafe { CGRectMakeWithDictionaryRepresentation(Some(&bounds), &raw mut rect) } {
                 return None;
             }
             let frame = ScreenRect::new(
@@ -159,31 +161,36 @@ pub fn screen_rect(window: &Window, bounds: Bounds<Pixels>) -> Option<ScreenRect
     Some(flip(on_screen, Screens::current(mtm)?.primary_height))
 }
 
-pub fn prepare_overlay(window: &Window) {
-    if let Some(ns_window) = ns_window(window) {
-        ns_window.setHidesOnDeactivate(false);
-        ns_window.setAnimationBehavior(NSWindowAnimationBehavior::None);
+/// The `NSWindow` behind the overlay, moved outside GPUI's update cycle so `AppKit`'s resize
+/// callbacks reach GPUI (they are dropped while the app is borrowed).
+#[derive(Clone)]
+pub struct NativeOverlay {
+    window: Retained<NSWindow>,
+}
+
+impl NativeOverlay {
+    pub fn place(&self, frame: ScreenRect, alpha: f64) {
+        let Some(screens) = MainThreadMarker::new().and_then(Screens::current) else {
+            return;
+        };
+        self.window
+            .setFrame_display(unflip(frame, screens.primary_height), true);
+        self.window.setAlphaValue(alpha);
+        if !self.window.isVisible() {
+            self.window.orderFrontRegardless();
+        }
+    }
+
+    pub fn hide(&self) {
+        self.window.orderOut(None);
     }
 }
 
-pub fn place_overlay(window: &Window, frame: ScreenRect, alpha: f64) {
-    let Some(mtm) = MainThreadMarker::new() else {
-        return;
-    };
-    let Some((ns_window, screens)) = ns_window(window).zip(Screens::current(mtm)) else {
-        return;
-    };
-    ns_window.setFrame_display(unflip(frame, screens.primary_height), false);
-    ns_window.setAlphaValue(alpha);
-    if !ns_window.isVisible() {
-        ns_window.orderFrontRegardless();
-    }
-}
-
-pub fn hide_overlay(window: &Window) {
-    if let Some(ns_window) = ns_window(window) {
-        ns_window.orderOut(None);
-    }
+pub fn prepare_overlay(window: &Window) -> Option<NativeOverlay> {
+    let ns_window = ns_window(window)?;
+    ns_window.setHidesOnDeactivate(false);
+    ns_window.setAnimationBehavior(NSWindowAnimationBehavior::None);
+    Some(NativeOverlay { window: ns_window })
 }
 
 fn ns_window(window: &Window) -> Option<Retained<NSWindow>> {
@@ -191,7 +198,7 @@ fn ns_window(window: &Window) -> Option<Retained<NSWindow>> {
 }
 
 fn ns_view(window: &Window) -> Option<Retained<NSView>> {
-    let handle = window.window_handle().ok()?;
+    let handle = HasWindowHandle::window_handle(window).ok()?;
     let RawWindowHandle::AppKit(handle) = handle.as_raw() else {
         return None;
     };
@@ -201,7 +208,7 @@ fn ns_view(window: &Window) -> Option<Retained<NSView>> {
 
 /// The attached screens in top-left global coordinates.
 struct Screens {
-    /// Height of the primary display; AppKit measures y upward from its bottom edge.
+    /// Height of the primary display; `AppKit` measures y upward from its bottom edge.
     primary_height: f64,
     /// `(frame, visible_frame)` per screen.
     frames: Vec<(ScreenRect, ScreenRect)>,
@@ -243,7 +250,7 @@ impl Screens {
     }
 }
 
-/// Converts AppKit screen coordinates (y up from the primary display's bottom edge) to top-left
+/// Converts `AppKit` screen coordinates (y up from the primary display's bottom edge) to top-left
 /// global coordinates.
 fn flip(rect: NSRect, primary_height: f64) -> ScreenRect {
     ScreenRect::new(
