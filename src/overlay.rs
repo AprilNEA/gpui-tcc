@@ -9,7 +9,7 @@ use gpui_kit::{
 };
 
 use crate::host_app::HostApp;
-use crate::motion::OVERLAY_SIZE;
+use crate::motion::{OVERLAY_CORNER_RADIUS, OVERLAY_SIZE};
 use crate::panel::PrivacyPanel;
 
 /// Font family resolved by the macOS text system to the system UI font.
@@ -57,7 +57,7 @@ impl Render for Overlay {
             .relative()
             .w(px(width as f32))
             .h(px(height as f32))
-            .rounded(px(18.))
+            .rounded(px(OVERLAY_CORNER_RADIUS as f32))
             .bg(palette.background)
             .border(px(0.5))
             .border_color(palette.border)
@@ -170,8 +170,12 @@ fn icon_chrome(icon: Option<Arc<Image>>) -> impl IntoElement {
         .children(icon.map(|icon| img(icon).size(px(22.))))
 }
 
+/// Opacity of the panel tint; the material view behind the window shows through the rest.
+const TINT_ALPHA: f32 = 0.78;
+
 /// Colors matching the `AppKit` semantic colors Permiso uses, resolved per appearance.
 struct Palette {
+    /// Tint over the native material, `windowBackgroundColor` at [`TINT_ALPHA`].
     background: Rgba,
     border: Rgba,
     label: Rgba,
@@ -185,7 +189,7 @@ impl Palette {
     fn for_appearance(appearance: WindowAppearance) -> Self {
         match appearance {
             WindowAppearance::Light | WindowAppearance::VibrantLight => Self {
-                background: gray(0.925, 0.96),
+                background: gray(0.925, TINT_ALPHA),
                 border: gray(0.0, 0.08),
                 label: gray(0.0, 0.70),
                 control_background: gray(1.0, 0.95),
@@ -199,7 +203,7 @@ impl Palette {
                 },
             },
             WindowAppearance::Dark | WindowAppearance::VibrantDark => Self {
-                background: gray(0.196, 0.96),
+                background: gray(0.196, TINT_ALPHA),
                 border: gray(1.0, 0.08),
                 label: gray(1.0, 0.70),
                 control_background: gray(0.118, 0.95),

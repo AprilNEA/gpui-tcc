@@ -17,6 +17,10 @@ use std::time::Duration;
 /// Size of the overlay window in points.
 pub const OVERLAY_SIZE: (f64, f64) = (530.0, 109.0);
 
+/// Corner radius of the overlay panel in points, shared by the GPUI chrome and the native
+/// material view behind it.
+pub const OVERLAY_CORNER_RADIUS: f64 = 18.0;
+
 /// How long the launch animation runs; it also sets the spring response.
 pub const LAUNCH_DURATION: Duration = Duration::from_millis(720);
 

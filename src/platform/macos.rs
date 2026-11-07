@@ -4,8 +4,10 @@ use gpui_kit::{Bounds, Pixels, Window};
 use objc2::rc::Retained;
 use objc2::{AnyThread as _, MainThreadMarker};
 use objc2_app_kit::{
-    NSBitmapImageFileType, NSBitmapImageRep, NSScreen, NSView, NSWindow, NSWindowAnimationBehavior,
-    NSWorkspace,
+    NSAutoresizingMaskOptions, NSBitmapImageFileType, NSBitmapImageRep, NSScreen,
+    NSStatusWindowLevel, NSView, NSVisualEffectBlendingMode, NSVisualEffectMaterial,
+    NSVisualEffectState, NSVisualEffectView, NSWindow, NSWindowAnimationBehavior,
+    NSWindowCollectionBehavior, NSWindowOrderingMode, NSWorkspace,
 };
 use objc2_core_foundation::{
     CFArray, CFDictionary, CFNumber, CFRetained, CFString, CFType, CGRect,
@@ -186,11 +188,43 @@ impl NativeOverlay {
     }
 }
 
+/// Configures the window GPUI opened as a passive overlay: above app windows but below menus,
+/// fixed in place during Exposé, skipped by window cycling, and backed by a blurred material.
 pub fn prepare_overlay(window: &Window) -> Option<NativeOverlay> {
+    let mtm = MainThreadMarker::new()?;
     let ns_window = ns_window(window)?;
+    ns_window.setLevel(NSStatusWindowLevel);
     ns_window.setHidesOnDeactivate(false);
     ns_window.setAnimationBehavior(NSWindowAnimationBehavior::None);
+    ns_window.setCollectionBehavior(
+        ns_window.collectionBehavior()
+            | NSWindowCollectionBehavior::Stationary
+            | NSWindowCollectionBehavior::IgnoresCycle,
+    );
+    let content = ns_window.contentView()?;
+    content.addSubview_positioned_relativeTo(
+        &material_view(mtm, content.bounds()),
+        NSWindowOrderingMode::Below,
+        None,
+    );
     Some(NativeOverlay { window: ns_window })
+}
+
+/// A popover material behind the GPUI content, clipped to the panel's corners.
+fn material_view(mtm: MainThreadMarker, frame: NSRect) -> Retained<NSVisualEffectView> {
+    let view = NSVisualEffectView::initWithFrame(mtm.alloc(), frame);
+    view.setMaterial(NSVisualEffectMaterial::Popover);
+    view.setBlendingMode(NSVisualEffectBlendingMode::BehindWindow);
+    view.setState(NSVisualEffectState::Active);
+    view.setAutoresizingMask(
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
+    );
+    view.setWantsLayer(true);
+    if let Some(layer) = view.layer() {
+        layer.setCornerRadius(motion::OVERLAY_CORNER_RADIUS);
+        layer.setMasksToBounds(true);
+    }
+    view
 }
 
 fn ns_window(window: &Window) -> Option<Retained<NSWindow>> {
