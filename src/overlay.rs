@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use gpui_kit::prelude::*;
 use gpui_kit::{
-    Context, ExternalDragPayload, FileDragPaths, FontWeight, Image, ImageFormat, Rgba, Window,
-    WindowAppearance, div, img, px,
+    Context, ExternalDragPayload, FileDragPaths, FontWeight, Image, ImageFormat, Rgba, Role,
+    Window, WindowAppearance, div, img, px,
 };
 
 use crate::host_app::HostApp;
@@ -87,6 +87,8 @@ impl Render for Overlay {
             .child(
                 div()
                     .id("back")
+                    .role(Role::Button)
+                    .aria_label("Back")
                     .absolute()
                     .left(px(18.))
                     .top(px(52.))
@@ -103,6 +105,11 @@ impl Render for Overlay {
             .child(
                 div()
                     .id("drag-row")
+                    .role(Role::Group)
+                    .aria_label(format!(
+                        "Drag {} into System Settings",
+                        self.host.display_name
+                    ))
                     .absolute()
                     .left(px(64.))
                     .right(px(21.))
