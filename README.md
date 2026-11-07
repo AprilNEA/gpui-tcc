@@ -4,7 +4,16 @@ Walks macOS users through granting your [GPUI](https://github.com/zed-industries
 
 A Rust port of [Permiso](https://github.com/zats/permiso) by Sash Zats, built on [gpui-kit](https://github.com/longbridge/gpui-kit).
 
-Supported panes: Accessibility, Screen & System Audio Recording, App Management. Requires macOS 13 or later; on other platforms `present` returns `Error::Unsupported`.
+Supported panes (`PrivacyPanel`):
+
+| Variant | System Settings pane |
+| --- | --- |
+| `Accessibility` | Accessibility (named "Device Control and Data Access" on macOS 27) |
+| `ScreenRecording` | Screen & System Audio Recording |
+| `AppManagement` | App Management |
+| `FullDiskAccess` | Full Disk Access |
+
+Requires macOS 13 or later; on other platforms `present` returns `Error::Unsupported`.
 
 ## Usage
 

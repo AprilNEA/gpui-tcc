@@ -7,6 +7,8 @@ pub enum PrivacyPanel {
     ScreenRecording,
     /// Privacy & Security › App Management.
     AppManagement,
+    /// Privacy & Security › Full Disk Access.
+    FullDiskAccess,
 }
 
 impl PrivacyPanel {
@@ -16,6 +18,7 @@ impl PrivacyPanel {
             Self::Accessibility => "Privacy_Accessibility",
             Self::ScreenRecording => "Privacy_ScreenCapture",
             Self::AppManagement => "Privacy_AppBundles",
+            Self::FullDiskAccess => "Privacy_AllFiles",
         };
         format!("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?{anchor}")
     }
@@ -26,6 +29,7 @@ impl PrivacyPanel {
             Self::Accessibility => "Accessibility",
             Self::ScreenRecording => "Screen Recording",
             Self::AppManagement => "App Management",
+            Self::FullDiskAccess => "Full Disk Access",
         }
     }
 }
