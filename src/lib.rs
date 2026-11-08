@@ -29,7 +29,7 @@ mod overlay;
 mod panel;
 mod platform;
 
-use gpui::{App, Bounds, Pixels, Window};
+use gpui::{App, Bounds, Pixels, SharedString, Window};
 
 pub use host_app::HostApp;
 pub use panel::PrivacyPanel;
@@ -59,6 +59,7 @@ pub enum Error {
 pub struct Guide {
     panel: PrivacyPanel,
     host: Option<HostApp>,
+    instruction: Option<SharedString>,
     launch_from: Option<ScreenRect>,
 }
 
@@ -68,6 +69,7 @@ impl Guide {
         Self {
             panel,
             host: None,
+            instruction: None,
             launch_from: None,
         }
     }
@@ -75,6 +77,14 @@ impl Guide {
     /// Shows `host` in the drag row instead of the running application.
     pub fn host_app(mut self, host: HostApp) -> Self {
         self.host = Some(host);
+        self
+    }
+
+    /// Replaces the instruction above the drag row, "Drag *app* to the list above to allow
+    /// *permission*", for example with a localized one. It also labels the drag row for
+    /// assistive technologies.
+    pub fn instruction(mut self, text: impl Into<SharedString>) -> Self {
+        self.instruction = Some(text.into());
         self
     }
 
@@ -98,7 +108,15 @@ impl Guide {
             Some(host) => host,
             None => HostApp::current()?,
         };
-        assistant::present(self.panel, host, self.launch_from, cx)
+        let instruction = self.instruction.unwrap_or_else(|| {
+            format!(
+                "Drag {} to the list above to allow {}",
+                host.display_name,
+                self.panel.title()
+            )
+            .into()
+        });
+        assistant::present(self.panel, host, instruction, self.launch_from, cx)
     }
 }
 

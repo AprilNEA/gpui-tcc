@@ -3,8 +3,8 @@
 use std::time::{Duration, Instant};
 
 use gpui::{
-    App, AppContext as _, AsyncApp, Bounds, Global, Task, WindowBackgroundAppearance, WindowBounds,
-    WindowHandle, WindowKind, WindowOptions, point, px, size,
+    App, AppContext as _, AsyncApp, Bounds, Global, SharedString, Task, WindowBackgroundAppearance,
+    WindowBounds, WindowHandle, WindowKind, WindowOptions, point, px, size,
 };
 
 use crate::Error;
@@ -54,6 +54,7 @@ enum Placement {
 pub(crate) fn present(
     panel: PrivacyPanel,
     host: HostApp,
+    instruction: SharedString,
     launch_from: Option<ScreenRect>,
     cx: &mut App,
 ) -> Result<(), Error> {
@@ -80,7 +81,7 @@ pub(crate) fn present(
     let overlay = cx
         .open_window(options, |window, cx| {
             native = platform::prepare_overlay(window);
-            cx.new(|_| Overlay::new(panel, host))
+            cx.new(|_| Overlay::new(host, instruction))
         })
         .map_err(Error::OpenWindow)?;
     let Some(native) = native else {

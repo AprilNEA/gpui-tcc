@@ -5,12 +5,11 @@ use std::sync::Arc;
 use gpui::prelude::*;
 use gpui::{
     Context, ExternalDragPayload, FileDragPaths, FontWeight, Image, ImageFormat, Rgba, Role,
-    Window, WindowAppearance, div, img, px,
+    SharedString, Window, WindowAppearance, div, img, px,
 };
 
 use crate::host_app::HostApp;
 use crate::motion::{OVERLAY_CORNER_RADIUS, OVERLAY_SIZE};
-use crate::panel::PrivacyPanel;
 
 /// Font family resolved by the macOS text system to the system UI font.
 const SYSTEM_FONT: &str = ".SystemUIFont";
@@ -33,13 +32,13 @@ const ICON_CHROME: Rgba = Rgba {
 };
 
 pub(crate) struct Overlay {
-    panel: PrivacyPanel,
     host: HostApp,
+    instruction: SharedString,
 }
 
 impl Overlay {
-    pub(crate) fn new(panel: PrivacyPanel, host: HostApp) -> Self {
-        Self { panel, host }
+    pub(crate) fn new(host: HostApp, instruction: SharedString) -> Self {
+        Self { host, instruction }
     }
 }
 
@@ -47,11 +46,6 @@ impl Render for Overlay {
     fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         let palette = Palette::for_appearance(window.appearance());
         let (width, height) = OVERLAY_SIZE;
-        let title = format!(
-            "Drag {} to the list above to allow {}",
-            self.host.display_name,
-            self.panel.title()
-        );
 
         div()
             .relative()
@@ -82,7 +76,7 @@ impl Render for Overlay {
                     .text_size(px(14.))
                     .font_weight(FontWeight::MEDIUM)
                     .truncate()
-                    .child(title),
+                    .child(self.instruction.clone()),
             )
             .child(
                 div()
@@ -106,10 +100,7 @@ impl Render for Overlay {
                 div()
                     .id("drag-row")
                     .role(Role::Group)
-                    .aria_label(format!(
-                        "Drag {} into System Settings",
-                        self.host.display_name
-                    ))
+                    .aria_label(self.instruction.clone())
                     .absolute()
                     .left(px(64.))
                     .right(px(21.))
