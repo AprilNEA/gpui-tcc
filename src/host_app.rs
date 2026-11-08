@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use gpui_kit::{Image, ImageFormat};
+use gpui::{Image, ImageFormat};
 
 use crate::Error;
 use crate::platform;

@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use gpui_kit::prelude::*;
-use gpui_kit::{
+use gpui::prelude::*;
+use gpui::{
     Context, ExternalDragPayload, FileDragPaths, FontWeight, Image, ImageFormat, Rgba, Role,
     Window, WindowAppearance, div, img, px,
 };

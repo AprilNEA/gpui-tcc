@@ -9,7 +9,7 @@
 //! [`Guide::present`] returns [`Error::Unsupported`].
 //!
 //! ```no_run
-//! use gpui_kit::{App, Bounds, Pixels, Window};
+//! use gpui::{App, Bounds, Pixels, Window};
 //! use gpui_tcc::{Guide, PrivacyPanel};
 //!
 //! fn request_accessibility(button: Bounds<Pixels>, window: &Window, cx: &mut App) {
@@ -29,7 +29,7 @@ mod overlay;
 mod panel;
 mod platform;
 
-use gpui_kit::{App, Bounds, Pixels, Window};
+use gpui::{App, Bounds, Pixels, Window};
 
 pub use host_app::HostApp;
 pub use panel::PrivacyPanel;

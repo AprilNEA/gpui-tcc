@@ -1,4 +1,4 @@
-use gpui_kit::{Bounds, Pixels, Window};
+use gpui::{Bounds, Pixels, Window};
 
 use super::{HostAppInfo, SettingsWindow};
 use crate::Error;

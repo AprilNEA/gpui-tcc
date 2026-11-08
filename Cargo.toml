@@ -12,7 +12,8 @@ categories = ["gui", "os::macos-apis"]
 
 [dependencies]
 anyhow = "1"
-gpui-kit = { version = "0.9", default-features = false }
+# GPUI itself rather than gpui-kit, so the guide shares whichever 0.3 snapshot the host app pins.
+gpui = { package = "gpui-pre", version = "0.3.10", default-features = false }
 raw-window-handle = "0.6"
 thiserror = "2"
 
@@ -44,6 +45,7 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSVisualEffectView",
     "NSWindow",
     "NSWorkspace",
+    "libc",
     "objc2-core-foundation",
     "objc2-core-graphics",
     "objc2-quartz-core",
@@ -64,6 +66,7 @@ objc2-core-graphics = { version = "0.3.2", default-features = false, features = 
 ] }
 objc2-quartz-core = { version = "0.3.2", default-features = false, features = [
     "CALayer",
+    "objc2-core-foundation",
 ] }
 
 [dev-dependencies]

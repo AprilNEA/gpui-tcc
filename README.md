@@ -2,7 +2,7 @@
 
 Walks macOS users through granting your [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) app a privacy permission. It opens the matching Privacy & Security pane in System Settings and floats a small panel over it that the user drags into the pane's app list. The panel follows the System Settings window, hides when another app comes to the front, and can fly in from the control the user clicked.
 
-A Rust port of [Permiso](https://github.com/zats/permiso) by Sash Zats, built on [gpui-kit](https://github.com/longbridge/gpui-kit).
+A Rust port of [Permiso](https://github.com/zats/permiso) by Sash Zats. The sample app is built on [gpui-kit](https://github.com/longbridge/gpui-kit); the library itself depends only on GPUI (`gpui-pre` 0.3.10 or any later 0.3 release), so it shares the GPUI your app already pins.
 
 Supported panes (`PrivacyPanel`):
 
@@ -23,7 +23,7 @@ gpui-tcc = "0.1"
 ```
 
 ```rust
-use gpui_kit::{App, Bounds, Pixels, Window};
+use gpui::{App, Bounds, Pixels, Window};
 use gpui_tcc::{Guide, PrivacyPanel};
 
 fn request_accessibility(button: Bounds<Pixels>, window: &Window, cx: &mut App) {

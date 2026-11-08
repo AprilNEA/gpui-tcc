@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use gpui_kit::{Bounds, Pixels, Window};
+use gpui::{Bounds, Pixels, Window};
 use objc2::rc::Retained;
 use objc2::{AnyThread as _, MainThreadMarker};
 use objc2_app_kit::{

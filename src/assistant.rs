@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 
-use gpui_kit::{
+use gpui::{
     App, AppContext as _, AsyncApp, Bounds, Global, Task, WindowBackgroundAppearance, WindowBounds,
     WindowHandle, WindowKind, WindowOptions, point, px, size,
 };
