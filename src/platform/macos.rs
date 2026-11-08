@@ -39,17 +39,39 @@ pub fn ensure_supported() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn host_app_info() -> Result<HostAppInfo, Error> {
+pub fn current_app_info() -> Result<HostAppInfo, Error> {
     let bundle = NSBundle::mainBundle();
     let bundle_path = PathBuf::from(bundle.bundlePath().to_string());
-    let path = if bundle_path.extension().is_some_and(|ext| ext == "app") {
+    let path = if is_app_bundle(&bundle_path) {
         bundle_path
     } else {
         std::env::current_exe()?
     };
-    let display_name = ["CFBundleDisplayName", "CFBundleName"]
-        .into_iter()
-        .find_map(|key| info_string(&bundle, key))
+    describe(path, Some(&bundle))
+}
+
+pub fn app_info(path: PathBuf) -> Result<HostAppInfo, Error> {
+    // A missing path would still get a name and a generic icon, and then drag nothing.
+    std::fs::metadata(&path)?;
+    let bundle = if is_app_bundle(&path) {
+        NSBundle::bundleWithPath(&NSString::from_str(&path.to_string_lossy()))
+    } else {
+        None
+    };
+    describe(path, bundle.as_deref())
+}
+
+fn is_app_bundle(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| ext == "app")
+}
+
+fn describe(path: PathBuf, bundle: Option<&NSBundle>) -> Result<HostAppInfo, Error> {
+    let display_name = bundle
+        .and_then(|bundle| {
+            ["CFBundleDisplayName", "CFBundleName"]
+                .into_iter()
+                .find_map(|key| info_string(bundle, key))
+        })
         .or_else(|| {
             path.file_stem()
                 .map(|stem| stem.to_string_lossy().into_owned())

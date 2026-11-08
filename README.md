@@ -35,6 +35,6 @@ fn request_accessibility(button: Bounds<Pixels>, window: &Window, cx: &mut App) 
 }
 ```
 
-`gpui_tcc::dismiss(cx)` closes the panel; the panel's back button does the same. `Guide::host_app` shows a different app than the running one, for example when a helper requests the permission on behalf of its parent.
+`gpui_tcc::dismiss(cx)` closes the panel; the panel's back button does the same. `Guide::host_app(HostApp::from_path(path)?)` shows a different app than the running one, for example a helper inside your app's bundle that holds the permission itself: the pane's `+` picker cannot browse into a bundle, but its list accepts the helper dragged from the panel.
 
 Run the sample app with `cargo run --example sample`.

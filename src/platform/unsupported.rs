@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use gpui::{Bounds, Pixels, Window};
 
 use super::{HostAppInfo, SettingsWindow};
@@ -8,7 +10,15 @@ pub fn ensure_supported() -> Result<(), Error> {
     Err(Error::Unsupported)
 }
 
-pub fn host_app_info() -> Result<HostAppInfo, Error> {
+pub fn current_app_info() -> Result<HostAppInfo, Error> {
+    Err(Error::Unsupported)
+}
+
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "shares the signature of the macOS implementation"
+)]
+pub fn app_info(_path: PathBuf) -> Result<HostAppInfo, Error> {
     Err(Error::Unsupported)
 }
 
