@@ -3,6 +3,8 @@
 pub enum PrivacyPanel {
     /// Privacy & Security › Accessibility.
     Accessibility,
+    /// Privacy & Security › Input Monitoring.
+    InputMonitoring,
     /// Privacy & Security › Screen & System Audio Recording.
     ScreenRecording,
     /// Privacy & Security › App Management.
@@ -16,6 +18,7 @@ impl PrivacyPanel {
     pub fn settings_url(self) -> String {
         let anchor = match self {
             Self::Accessibility => "Privacy_Accessibility",
+            Self::InputMonitoring => "Privacy_ListenEvent",
             Self::ScreenRecording => "Privacy_ScreenCapture",
             Self::AppManagement => "Privacy_AppBundles",
             Self::FullDiskAccess => "Privacy_AllFiles",
@@ -27,6 +30,7 @@ impl PrivacyPanel {
     pub fn title(self) -> &'static str {
         match self {
             Self::Accessibility => "Accessibility",
+            Self::InputMonitoring => "Input Monitoring",
             Self::ScreenRecording => "Screen Recording",
             Self::AppManagement => "App Management",
             Self::FullDiskAccess => "Full Disk Access",

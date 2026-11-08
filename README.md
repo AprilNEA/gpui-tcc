@@ -9,6 +9,7 @@ Supported panes (`PrivacyPanel`):
 | Variant | System Settings pane |
 | --- | --- |
 | `Accessibility` | Accessibility (named "Device Control and Data Access" on macOS 27) |
+| `InputMonitoring` | Input Monitoring |
 | `ScreenRecording` | Screen & System Audio Recording |
 | `AppManagement` | App Management |
 | `FullDiskAccess` | Full Disk Access |

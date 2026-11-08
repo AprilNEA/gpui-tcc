@@ -9,8 +9,9 @@ use gpui_kit::{
 };
 use gpui_tcc::{Guide, PrivacyPanel};
 
-const PANELS: [PrivacyPanel; 4] = [
+const PANELS: [PrivacyPanel; 5] = [
     PrivacyPanel::Accessibility,
+    PrivacyPanel::InputMonitoring,
     PrivacyPanel::ScreenRecording,
     PrivacyPanel::AppManagement,
     PrivacyPanel::FullDiskAccess,
