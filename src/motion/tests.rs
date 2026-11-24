@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use super::{
-    OVERLAY_SIZE, ScreenRect, anchored_frame, launch_alpha, launch_frame, spring_progress,
+    Arrow, OVERLAY_SIZE, ScreenRect, anchored_frame, arrow_toward, launch_alpha, launch_frame,
+    spring_progress,
 };
 
 const VISIBLE: ScreenRect = ScreenRect::new(0.0, 25.0, 1728.0, 1072.0);
@@ -21,8 +22,51 @@ fn anchored_frame_centers_under_settings_content_column() {
     let content_min_x = 400.0 + 170.0;
     let content_width = 900.0 - 170.0;
     assert_close(frame.x, content_min_x + (content_width - 530.0) / 2.0 - 8.0);
-    assert_close(frame.max_y(), settings.max_y() - 14.0);
+    assert_close(frame.y, settings.max_y() + 10.0);
     assert_eq!((frame.width, frame.height), OVERLAY_SIZE);
+}
+
+#[test]
+fn anchored_frame_stays_off_the_settings_window() {
+    // Room below: the overlay sits under the window, clear of the list's + and - buttons.
+    let settings = ScreenRect::new(400.0, 200.0, 900.0, 600.0);
+    let below = anchored_frame(settings, VISIBLE);
+    assert_close(below.intersection_area(settings), 0.0);
+
+    // The window reaches the bottom of the screen: the overlay moves above it.
+    let low = ScreenRect::new(400.0, 400.0, 900.0, 690.0);
+    let above = anchored_frame(low, VISIBLE);
+    assert_close(above.max_y(), low.y - 10.0);
+    assert_close(above.intersection_area(low), 0.0);
+
+    // No room above or below, as on a laptop screen: it overlaps the window's top, the pane's
+    // title and description, and stays clear of the bottom, where the + and - buttons are.
+    let tall = ScreenRect::new(400.0, 60.0, 900.0, 1000.0);
+    let top = anchored_frame(tall, VISIBLE);
+    assert_close(top.y, VISIBLE.y + 8.0);
+    assert!(
+        top.max_y() < tall.y + 120.0,
+        "covers only the window top: {top:?}"
+    );
+}
+
+#[test]
+fn the_arrow_points_at_the_window_from_either_side() {
+    // Below the window it points up; above it, or over its top, it points down.
+    let settings = ScreenRect::new(400.0, 200.0, 900.0, 600.0);
+    assert_eq!(
+        arrow_toward(anchored_frame(settings, VISIBLE), settings),
+        Arrow::Up
+    );
+
+    let low = ScreenRect::new(400.0, 400.0, 900.0, 690.0);
+    assert_eq!(arrow_toward(anchored_frame(low, VISIBLE), low), Arrow::Down);
+
+    let tall = ScreenRect::new(400.0, 60.0, 900.0, 1000.0);
+    assert_eq!(
+        arrow_toward(anchored_frame(tall, VISIBLE), tall),
+        Arrow::Down
+    );
 }
 
 #[test]
@@ -33,11 +77,8 @@ fn anchored_frame_clamps_inside_visible_frame() {
     let right_edge = anchored_frame(ScreenRect::new(1500.0, 100.0, 900.0, 600.0), VISIBLE);
     assert_close(right_edge.max_x(), VISIBLE.max_x() - 8.0);
 
-    let top_edge = anchored_frame(ScreenRect::new(400.0, -500.0, 900.0, 600.0), VISIBLE);
-    assert_close(top_edge.y, VISIBLE.y + 8.0);
-
-    let bottom_edge = anchored_frame(ScreenRect::new(400.0, 900.0, 900.0, 600.0), VISIBLE);
-    assert_close(bottom_edge.max_y(), VISIBLE.max_y() - 8.0);
+    let tall = anchored_frame(ScreenRect::new(400.0, -500.0, 900.0, 1700.0), VISIBLE);
+    assert_close(tall.y, VISIBLE.y + 8.0);
 }
 
 #[test]

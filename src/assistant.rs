@@ -9,7 +9,7 @@ use gpui::{
 
 use crate::Error;
 use crate::host_app::HostApp;
-use crate::motion::{self, INITIAL_ALPHA, LAUNCH_DURATION, OVERLAY_SIZE, ScreenRect};
+use crate::motion::{self, Arrow, INITIAL_ALPHA, LAUNCH_DURATION, OVERLAY_SIZE, ScreenRect};
 use crate::overlay::Overlay;
 use crate::panel::PrivacyPanel;
 use crate::platform::{self, NativeOverlay};
@@ -48,7 +48,11 @@ enum Phase {
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Placement {
     Hidden,
-    Shown { frame: ScreenRect, alpha: f64 },
+    Shown {
+        frame: ScreenRect,
+        alpha: f64,
+        arrow: Arrow,
+    },
 }
 
 pub(crate) fn present(
@@ -103,7 +107,7 @@ pub(crate) fn present(
             };
             match placement {
                 Placement::Hidden => native.hide(),
-                Placement::Shown { frame, alpha } => native.place(frame, alpha),
+                Placement::Shown { frame, alpha, .. } => native.place(frame, alpha),
             }
             cx.background_executor().timer(interval).await;
         }
@@ -146,7 +150,13 @@ fn advance(cx: &mut App) -> Option<(NativeOverlay, Placement, Duration)> {
     let session = cx.global_mut::<Assistant>().session.as_mut()?;
     let (placement, phase, interval) = step(session.phase, platform::settings_window());
     session.phase = phase;
-    Some((session.native.clone(), placement, interval))
+    let (native, overlay) = (session.native.clone(), session.overlay);
+    if let Placement::Shown { arrow, .. } = placement {
+        overlay
+            .update(cx, |overlay, _, cx| overlay.point(arrow, cx))
+            .ok();
+    }
+    Some((native, placement, interval))
 }
 
 fn step(phase: Phase, settings: Option<platform::SettingsWindow>) -> (Placement, Phase, Duration) {
@@ -159,9 +169,12 @@ fn step(phase: Phase, settings: Option<platform::SettingsWindow>) -> (Placement,
     };
 
     let target = motion::anchored_frame(settings.frame, settings.visible);
+    // Taken from where the overlay will rest, so it does not flip during the launch.
+    let arrow = motion::arrow_toward(target, settings.frame);
     let resting = Placement::Shown {
         frame: target,
         alpha: 1.0,
+        arrow,
     };
     match phase {
         Phase::Pending {
@@ -170,6 +183,7 @@ fn step(phase: Phase, settings: Option<platform::SettingsWindow>) -> (Placement,
             Placement::Shown {
                 frame: from,
                 alpha: INITIAL_ALPHA,
+                arrow,
             },
             Phase::Launching {
                 started: Instant::now(),
@@ -188,6 +202,7 @@ fn step(phase: Phase, settings: Option<platform::SettingsWindow>) -> (Placement,
                 Placement::Shown {
                     frame: motion::launch_frame(from, target, progress),
                     alpha: motion::launch_alpha(progress),
+                    arrow,
                 },
                 phase,
                 ANIMATION_INTERVAL,

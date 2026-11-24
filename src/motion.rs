@@ -99,20 +99,34 @@ impl ScreenRect {
     }
 }
 
+/// Gap kept between the overlay and the System Settings window it sits outside.
+const WINDOW_GAP: f64 = 10.0;
+
 /// Where the overlay sits relative to the System Settings window: horizontally centered under
-/// the content column (right of the sidebar), resting 14 pt above the window's bottom edge, and
-/// clamped to stay [`SCREEN_MARGIN`] inside the screen's visible frame.
+/// the content column (right of the sidebar), and outside the window so it covers none of the
+/// pane. A privacy list ends in its `+` and `-` buttons, and those must stay clickable to remove
+/// and re-add an app. The overlay goes [`WINDOW_GAP`] below the window when it fits on screen,
+/// else the same gap above it. Where the screen leaves no room above either, as on a laptop's
+/// built-in display, clamping pushes it down over the window's top, where the pane shows only
+/// its title and description, never over the buttons at the list's end. The result is clamped
+/// to stay [`SCREEN_MARGIN`] inside the screen's visible frame.
 pub fn anchored_frame(settings: ScreenRect, visible: ScreenRect) -> ScreenRect {
     let (width, height) = OVERLAY_SIZE;
     let content_min_x = settings.x + SIDEBAR_WIDTH;
     let content_width = (settings.width - SIDEBAR_WIDTH).max(width);
     let preferred_x = content_min_x + (content_width - width) / 2.0 - 8.0;
-    let preferred_y = settings.max_y() - 14.0 - height;
 
     let min_x = visible.x + SCREEN_MARGIN;
     let max_x = visible.max_x() - width - SCREEN_MARGIN;
     let min_y = visible.y + SCREEN_MARGIN;
     let max_y = visible.max_y() - height - SCREEN_MARGIN;
+
+    let below = settings.max_y() + WINDOW_GAP;
+    let preferred_y = if below <= max_y {
+        below
+    } else {
+        settings.y - WINDOW_GAP - height
+    };
 
     ScreenRect::new(
         preferred_x.clamp(min_x, max_x),
@@ -120,6 +134,24 @@ pub fn anchored_frame(settings: ScreenRect, visible: ScreenRect) -> ScreenRect {
         width,
         height,
     )
+}
+
+/// Which way the overlay's arrow points: toward the privacy list it asks the user to drag into.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Arrow {
+    #[default]
+    Up,
+    Down,
+}
+
+/// The arrow for an overlay at `overlay` beside the `settings` window: down while the overlay sits
+/// above the window's middle (above the window, or over its top), up while it sits below.
+pub fn arrow_toward(overlay: ScreenRect, settings: ScreenRect) -> Arrow {
+    if overlay.center().1 < settings.center().1 {
+        Arrow::Down
+    } else {
+        Arrow::Up
+    }
 }
 
 /// The frame to anchor against when System Settings is frontmost but no window is visible yet.

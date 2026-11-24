@@ -9,7 +9,7 @@ use gpui::{
 };
 
 use crate::host_app::HostApp;
-use crate::motion::{OVERLAY_CORNER_RADIUS, OVERLAY_SIZE};
+use crate::motion::{Arrow, OVERLAY_CORNER_RADIUS, OVERLAY_SIZE};
 
 /// Font family resolved by the macOS text system to the system UI font.
 const SYSTEM_FONT: &str = ".SystemUIFont";
@@ -34,11 +34,24 @@ const ICON_CHROME: Rgba = Rgba {
 pub(crate) struct Overlay {
     host: HostApp,
     instruction: SharedString,
+    arrow: Arrow,
 }
 
 impl Overlay {
     pub(crate) fn new(host: HostApp, instruction: SharedString) -> Self {
-        Self { host, instruction }
+        Self {
+            host,
+            instruction,
+            arrow: Arrow::default(),
+        }
+    }
+
+    /// Point the arrow at the privacy list, from wherever the overlay now sits.
+    pub(crate) fn point(&mut self, arrow: Arrow, cx: &mut Context<Self>) {
+        if self.arrow != arrow {
+            self.arrow = arrow;
+            cx.notify();
+        }
     }
 }
 
@@ -58,11 +71,18 @@ impl Render for Overlay {
             .font_family(SYSTEM_FONT)
             .text_color(palette.label)
             .child(
-                img(icon_svg(ARROW_UP, ARROW_BLUE, 28.0))
-                    .absolute()
-                    .left(px(35.))
-                    .top(px(10.))
-                    .size(px(28.)),
+                img(icon_svg(
+                    match self.arrow {
+                        Arrow::Up => ARROW_UP,
+                        Arrow::Down => ARROW_DOWN,
+                    },
+                    ARROW_BLUE,
+                    28.0,
+                ))
+                .absolute()
+                .left(px(35.))
+                .top(px(10.))
+                .size(px(28.)),
             )
             .child(
                 div()
@@ -224,6 +244,11 @@ struct Icon {
 
 const ARROW_UP: Icon = Icon {
     paths: r#"<path d="M12 20.5V4.5"/><path d="M5 11.5l7-7 7 7"/>"#,
+    stroke_width: 3.6,
+};
+
+const ARROW_DOWN: Icon = Icon {
+    paths: r#"<path d="M12 3.5v16"/><path d="M5 12.5l7 7 7-7"/>"#,
     stroke_width: 3.6,
 };
 
