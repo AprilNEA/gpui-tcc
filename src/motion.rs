@@ -99,20 +99,36 @@ impl ScreenRect {
     }
 }
 
+/// Gap kept between the overlay and the System Settings window it sits outside.
+const WINDOW_GAP: f64 = 10.0;
+
 /// Where the overlay sits relative to the System Settings window: horizontally centered under
-/// the content column (right of the sidebar), resting 14 pt above the window's bottom edge, and
-/// clamped to stay [`SCREEN_MARGIN`] inside the screen's visible frame.
+/// the content column (right of the sidebar), and outside the window so it covers none of the
+/// pane. A privacy list ends in its `+` and `-` buttons, and those must stay clickable to remove
+/// and re-add an app. The overlay goes [`WINDOW_GAP`] below the window when it fits on screen,
+/// else the same gap above it. A window with no room on either side gets it resting 14 pt above
+/// the window's bottom edge, inside it. The result is clamped to stay [`SCREEN_MARGIN`] inside the
+/// screen's visible frame.
 pub fn anchored_frame(settings: ScreenRect, visible: ScreenRect) -> ScreenRect {
     let (width, height) = OVERLAY_SIZE;
     let content_min_x = settings.x + SIDEBAR_WIDTH;
     let content_width = (settings.width - SIDEBAR_WIDTH).max(width);
     let preferred_x = content_min_x + (content_width - width) / 2.0 - 8.0;
-    let preferred_y = settings.max_y() - 14.0 - height;
 
     let min_x = visible.x + SCREEN_MARGIN;
     let max_x = visible.max_x() - width - SCREEN_MARGIN;
     let min_y = visible.y + SCREEN_MARGIN;
     let max_y = visible.max_y() - height - SCREEN_MARGIN;
+
+    let below = settings.max_y() + WINDOW_GAP;
+    let above = settings.y - WINDOW_GAP - height;
+    let preferred_y = if below <= max_y {
+        below
+    } else if above >= min_y {
+        above
+    } else {
+        settings.max_y() - 14.0 - height
+    };
 
     ScreenRect::new(
         preferred_x.clamp(min_x, max_x),

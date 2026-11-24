@@ -21,8 +21,27 @@ fn anchored_frame_centers_under_settings_content_column() {
     let content_min_x = 400.0 + 170.0;
     let content_width = 900.0 - 170.0;
     assert_close(frame.x, content_min_x + (content_width - 530.0) / 2.0 - 8.0);
-    assert_close(frame.max_y(), settings.max_y() - 14.0);
+    assert_close(frame.y, settings.max_y() + 10.0);
     assert_eq!((frame.width, frame.height), OVERLAY_SIZE);
+}
+
+#[test]
+fn anchored_frame_stays_off_the_settings_window() {
+    // Room below: the overlay sits under the window, clear of the list's + and - buttons.
+    let settings = ScreenRect::new(400.0, 200.0, 900.0, 600.0);
+    let below = anchored_frame(settings, VISIBLE);
+    assert_close(below.intersection_area(settings), 0.0);
+
+    // The window reaches the bottom of the screen: the overlay moves above it.
+    let low = ScreenRect::new(400.0, 400.0, 900.0, 690.0);
+    let above = anchored_frame(low, VISIBLE);
+    assert_close(above.max_y(), low.y - 10.0);
+    assert_close(above.intersection_area(low), 0.0);
+
+    // The window fills the screen: no room outside, so it rests inside the bottom edge.
+    let full = ScreenRect::new(0.0, 25.0, 1728.0, 1072.0);
+    let inside = anchored_frame(full, VISIBLE);
+    assert_close(inside.max_y(), full.max_y() - 14.0);
 }
 
 #[test]
@@ -33,11 +52,8 @@ fn anchored_frame_clamps_inside_visible_frame() {
     let right_edge = anchored_frame(ScreenRect::new(1500.0, 100.0, 900.0, 600.0), VISIBLE);
     assert_close(right_edge.max_x(), VISIBLE.max_x() - 8.0);
 
-    let top_edge = anchored_frame(ScreenRect::new(400.0, -500.0, 900.0, 600.0), VISIBLE);
-    assert_close(top_edge.y, VISIBLE.y + 8.0);
-
-    let bottom_edge = anchored_frame(ScreenRect::new(400.0, 900.0, 900.0, 600.0), VISIBLE);
-    assert_close(bottom_edge.max_y(), VISIBLE.max_y() - 8.0);
+    let tall = anchored_frame(ScreenRect::new(400.0, -500.0, 900.0, 1700.0), VISIBLE);
+    assert_close(tall.max_y(), VISIBLE.max_y() - 8.0);
 }
 
 #[test]
