@@ -136,6 +136,24 @@ pub fn anchored_frame(settings: ScreenRect, visible: ScreenRect) -> ScreenRect {
     )
 }
 
+/// Which way the overlay's arrow points: toward the privacy list it asks the user to drag into.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Arrow {
+    #[default]
+    Up,
+    Down,
+}
+
+/// The arrow for an overlay at `overlay` beside the `settings` window: down while the overlay sits
+/// above the window's middle (above the window, or over its top), up while it sits below.
+pub fn arrow_toward(overlay: ScreenRect, settings: ScreenRect) -> Arrow {
+    if overlay.center().1 < settings.center().1 {
+        Arrow::Down
+    } else {
+        Arrow::Up
+    }
+}
+
 /// The frame to anchor against when System Settings is frontmost but no window is visible yet.
 pub fn fallback_settings_frame(visible: ScreenRect) -> ScreenRect {
     visible.inset(80.0, 70.0)

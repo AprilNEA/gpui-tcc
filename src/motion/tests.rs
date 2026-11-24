@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use super::{
-    OVERLAY_SIZE, ScreenRect, anchored_frame, launch_alpha, launch_frame, spring_progress,
+    Arrow, OVERLAY_SIZE, ScreenRect, anchored_frame, arrow_toward, launch_alpha, launch_frame,
+    spring_progress,
 };
 
 const VISIBLE: ScreenRect = ScreenRect::new(0.0, 25.0, 1728.0, 1072.0);
@@ -46,6 +47,25 @@ fn anchored_frame_stays_off_the_settings_window() {
     assert!(
         top.max_y() < tall.y + 120.0,
         "covers only the window top: {top:?}"
+    );
+}
+
+#[test]
+fn the_arrow_points_at_the_window_from_either_side() {
+    // Below the window it points up; above it, or over its top, it points down.
+    let settings = ScreenRect::new(400.0, 200.0, 900.0, 600.0);
+    assert_eq!(
+        arrow_toward(anchored_frame(settings, VISIBLE), settings),
+        Arrow::Up
+    );
+
+    let low = ScreenRect::new(400.0, 400.0, 900.0, 690.0);
+    assert_eq!(arrow_toward(anchored_frame(low, VISIBLE), low), Arrow::Down);
+
+    let tall = ScreenRect::new(400.0, 60.0, 900.0, 1000.0);
+    assert_eq!(
+        arrow_toward(anchored_frame(tall, VISIBLE), tall),
+        Arrow::Down
     );
 }
 
