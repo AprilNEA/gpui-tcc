@@ -106,9 +106,10 @@ const WINDOW_GAP: f64 = 10.0;
 /// the content column (right of the sidebar), and outside the window so it covers none of the
 /// pane. A privacy list ends in its `+` and `-` buttons, and those must stay clickable to remove
 /// and re-add an app. The overlay goes [`WINDOW_GAP`] below the window when it fits on screen,
-/// else the same gap above it. A window with no room on either side gets it resting 14 pt above
-/// the window's bottom edge, inside it. The result is clamped to stay [`SCREEN_MARGIN`] inside the
-/// screen's visible frame.
+/// else the same gap above it. Where the screen leaves no room above either, as on a laptop's
+/// built-in display, clamping pushes it down over the window's top, where the pane shows only
+/// its title and description, never over the buttons at the list's end. The result is clamped
+/// to stay [`SCREEN_MARGIN`] inside the screen's visible frame.
 pub fn anchored_frame(settings: ScreenRect, visible: ScreenRect) -> ScreenRect {
     let (width, height) = OVERLAY_SIZE;
     let content_min_x = settings.x + SIDEBAR_WIDTH;
@@ -121,13 +122,10 @@ pub fn anchored_frame(settings: ScreenRect, visible: ScreenRect) -> ScreenRect {
     let max_y = visible.max_y() - height - SCREEN_MARGIN;
 
     let below = settings.max_y() + WINDOW_GAP;
-    let above = settings.y - WINDOW_GAP - height;
     let preferred_y = if below <= max_y {
         below
-    } else if above >= min_y {
-        above
     } else {
-        settings.max_y() - 14.0 - height
+        settings.y - WINDOW_GAP - height
     };
 
     ScreenRect::new(
